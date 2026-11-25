@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHAP Uygulama & Müşteri Sunum Rehberi | Mehmet Buğra Kara</title>
+  <meta name="description" content="Makine öğrenmesi modellerini müşteriye ve yöneticilere metriklerle değil, net iş kararlarıyla anlatın. İnteraktif SHAP Waterfall simülatörü, Python kodları ve sunum şablonu.">
+  <meta property="og:title" content="SHAP Uygulama & Müşteri Sunum Rehberi">
+  <meta property="og:description" content="Hangi değişken tahmini ne kadar ve hangi yönde etkiliyor? İnteraktif SHAP simülatörü, uygulamalı Python kodları ve yönetici sunum şablonu.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,600;1,9..144,700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-elev: #0f1625;
+      --bg-card: rgba(17, 24, 39, 0.78);
+      --bg-code: #0b1120;
+      --fg: #f1f5f9;
+      --fg-muted: #94a3b8;
+      --fg-subtle: #64748b;
+      --border: rgba(148, 163, 184, 0.16);
+      --border-strong: rgba(148, 163, 184, 0.28);
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+      --coral: #f43f5e;
+      --coral-soft: rgba(244, 63, 94, 0.15);
+      --emerald: #10b981;
+      --emerald-soft: rgba(16, 185, 129, 0.14);
+      --cyan: #38bdf8;
+      --cyan-soft: rgba(56, 189, 248, 0.14);
+      --terracotta: #d97757;
+      --shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.55);
+      --grid-line: rgba(148, 163, 184, 0.05);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8f7f4;
+      --bg-elev: #ffffff;
+      --bg-card: #ffffff;
+      --bg-code: #14171f;
+      --fg: #141413;
+      --fg-muted: #4b5563;
+      --fg-subtle: #6b7280;
+      --border: rgba(20, 20, 19, 0.1);
+      --border-strong: rgba(20, 20, 19, 0.2);
+      --amber: #d97706;
+      --amber-soft: rgba(217, 119, 6, 0.12);
+      --coral: #dc2626;
+      --coral-soft: rgba(220, 38, 38, 0.1);
+      --emerald: #16a34a;
+      --emerald-soft: rgba(22, 163, 74, 0.1);
+      --cyan: #0284c7;
+      --cyan-soft: rgba(2, 132, 199, 0.1);
+      --terracotta: #c96442;
+      --shadow: 0 18px 40px -22px rgba(20, 20, 19, 0.14);
+      --grid-line: rgba(20, 20, 19, 0.04);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 44px 44px;
+      color: var(--fg);
+      line-height: 1.65;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .font-serif-italic {
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-weight: 700;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+
+    /* Progress bar */
+    #scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, var(--amber), var(--terracotta), var(--cyan));
+      z-index: 100;
+      transition: width 0.08s linear;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: color-mix(in srgb, var(--bg) 84%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 20px;
+      height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      color: var(--fg);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-size: 1.02rem;
+    }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--amber), var(--terracotta));
+      color: #090d16;
+      display: grid;
+      place-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      font-size: 0.9rem;
+      box-shadow: 0 6px 20px -6px rgba(245, 158, 11, 0.6);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--fg-muted);
+      font-size: 0.86rem;
+      font-weight: 600;
+      padding: 6px 11px;
+      border-radius: 8px;
+      transition: color 0.18s, background 0.18s;
+    }
+    .nav-links a:hover {
+      color: var(--fg);
+      background: var(--border);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .icon-btn {
+      background: var(--bg-elev);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 11px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: border-color 0.18s, transform 0.15s;
+    }
+    .icon-btn:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    /* Container & Sections */
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    section {
+      padding: 72px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    section:last-of-type {
+      border-bottom: none;
+    }
+
+    /* Hero */
+    .hero {
+      padding: 76px 0 64px;
+      position: relative;
+    }
+    .hero-glow {
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(860px, 95vw);
+      height: 360px;
+      background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.14), rgba(56, 189, 248, 0.08) 45%, transparent 72%);
+      pointer-events: none;
+      z-index: -1;
+      filter: blur(24px);
+    }
+    .micro-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--amber);
+      background: var(--amber-soft);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 6px 13px;
+      border-radius: 999px;
+      margin-bottom: 22px;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+      box-shadow: 0 0 10px var(--amber);
+    }
+    h1 {
+      margin: 0 0 20px;
+      font-size: clamp(2.15rem, 5vw, 3.6rem);
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      font-weight: 800;
+      max-width: 860px;
+    }
+    h1 .accent-italic {
+      color: var(--amber);
+      font-weight: 700;
+    }
+    .hero-lead {
+      font-size: clamp(1.04rem, 1.8vw, 1.22rem);
+      color: var(--fg-muted);
+      max-width: 720px;
+      margin: 0 0 32px;
+      line-height: 1.7;
+    }
+    .hero-cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 44px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--amber), var(--terracotta));
+      color: #090d16;
+      font-weight: 800;
+      font-size: 0.94rem;
+      padding: 12px 22px;
+      border-radius: 11px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 28px -10px rgba(245, 158, 11, 0.65);
+      transition: transform 0.16s ease, filter 0.16s ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.06);
+    }
+    .btn-secondary {
+      background: var(--bg-elev);
+      color: var(--fg);
+      font-weight: 700;
+      font-size: 0.94rem;
+      padding: 12px 22px;
+      border-radius: 11px;
+      text-decoration: none;
+      border: 1px solid var(--border-strong);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.16s ease, transform 0.16s ease;
+    }
+    .btn-secondary:hover {
+      background: var(--border);
+      transform: translateY(-2px);
+    }
+
+    /* Comparison Hero Cards */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .card-bad {
+      border-color: rgba(244, 63, 94, 0.28);
+      position: relative;
+      overflow: hidden;
+    }
+    .card-good {
+      border-color: rgba(16, 185, 129, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+    }
+    .pill-bad { background: var(--coral-soft); color: var(--coral); }
+    .pill-good { background: var(--emerald-soft); color: var(--emerald); }
+    .pill-cyan { background: var(--cyan-soft); color: var(--cyan); }
+    .pill-amber { background: var(--amber-soft); color: var(--amber); }
+
+    .metric-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .metric-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 11px;
+      border-radius: 8px;
+      background: var(--border);
+      color: var(--fg-muted);
+      text-decoration: line-through;
+      text-decoration-color: var(--coral);
+      text-decoration-thickness: 2px;
+    }
+    .action-list {
+      list-style: none;
+      padding: 0;
+      margin: 14px 0 0;
+      display: grid;
+      gap: 9px;
+      font-size: 0.93rem;
+    }
+    .action-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+    }
+
+    /* Section Headings */
+    .section-kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 10px;
+      display: block;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .section-desc {
+      color: var(--fg-muted);
+      max-width: 720px;
+      margin: 0 0 32px;
+      font-size: 1.02rem;
+    }
+
+    /* Formula Box */
+    .formula-box {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(245, 158, 11, 0.08));
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 26px 24px;
+      text-align: center;
+      margin: 24px 0 30px;
+    }
+    .formula-eq {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1.1rem, 2.6vw, 1.65rem);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 14px;
+    }
+    .formula-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px 24px;
+      font-size: 0.88rem;
+      color: var(--fg-muted);
+    }
+    .formula-legend span strong { color: var(--fg); }
+
+    /* Grid layouts */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    /* Interactive Simulator */
+    .sim-wrapper {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 22px;
+      align-items: start;
+    }
+    .preset-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .preset-btn {
+      background: var(--bg-elev);
+      color: var(--fg-muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .preset-btn:hover, .preset-btn.active {
+      color: #090d16;
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+    .slider-group {
+      margin-bottom: 16px;
+    }
+    .slider-group:last-child { margin-bottom: 0; }
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .slider-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--cyan);
+      background: var(--cyan-soft);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--amber);
+      cursor: pointer;
+      height: 6px;
+    }
+
+    /* Waterfall Chart */
+    .wf-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .wf-score-pill {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .wf-score-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .wf-rows {
+      display: grid;
+      gap: 13px;
+    }
+    .wf-row {
+      display: grid;
+      grid-template-columns: 165px 1fr 78px;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.88rem;
+    }
+    .wf-label {
+      font-weight: 600;
+      color: var(--fg);
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+    .wf-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--fg-subtle);
+      margin-top: 2px;
+    }
+    .wf-track {
+      position: relative;
+      height: 28px;
+      background: rgba(148, 163, 184, 0.08);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .wf-zero {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1.5px;
+      background: var(--border-strong);
+      z-index: 2;
+    }
+    .wf-bar {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      border-radius: 5px;
+      transition: left 0.25s ease, width 0.25s ease, background-color 0.25s ease;
+    }
+    .wf-bar.pos {
+      background: linear-gradient(90deg, #f43f5e, #fb7185);
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+    }
+    .wf-bar.neg {
+      background: linear-gradient(90deg, #10b981, #34d399);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+    }
+    .wf-delta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    .wf-delta.pos { color: var(--coral); }
+    .wf-delta.neg { color: var(--emerald); }
+
+    .sim-action-box {
+      margin-top: 20px;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: var(--emerald-soft);
+      border: 1px solid rgba(16, 185, 129, 0.32);
+    }
+    .sim-action-box.high-risk {
+      background: var(--coral-soft);
+      border-color: rgba(244, 63, 94, 0.35);
+    }
+    .sim-action-box.mid-risk {
+      background: var(--amber-soft);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+    .sim-action-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
+    }
+    .sim-action-text {
+      margin: 0;
+      font-size: 0.94rem;
+      font-weight: 600;
+      color: var(--fg);
+    }
+
+    /* Plot Tabs */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      background: var(--bg-elev);
+      color: var(--fg-muted);
+      border: 1px solid var(--border);
+      padding: 9px 15px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .tab-btn:hover { color: var(--fg); border-color: var(--border-strong); }
+    .tab-btn.active {
+      background: var(--cyan-soft);
+      color: var(--cyan);
+      border-color: rgba(56, 189, 248, 0.45);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: grid; grid-template-columns: 1.05fr 1fr; gap: 22px; align-items: center; }
+
+    .svg-stage {
+      background: #0b1120;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    /* Code Blocks */
+    .code-card {
+      margin-bottom: 22px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--bg-code);
+      color: #e2e8f0;
+    }
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      font-size: 0.82rem;
+    }
+    .code-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 7px;
+      padding: 5px 11px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .copy-btn:hover { background: rgba(255, 255, 255, 0.16); }
+    .copy-btn.copied {
+      background: #10b981;
+      border-color: #10b981;
+      color: #06281e;
+    }
+    pre {
+      margin: 0;
+      padding: 18px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+    .kw { color: #c084fc; }
+    .fn { color: #38bdf8; }
+    .str { color: #4ade80; }
+    .cm { color: #64748b; font-style: italic; }
+    .num { color: #fbbf24; }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg-card);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 13px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--fg-muted);
+      background: rgba(148, 163, 184, 0.05);
+    }
+    tr:last-child td { border-bottom: none; }
+
+    /* Pitfalls Accordion / Cards */
+    .pitfall-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--coral);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .pitfall-fix {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+      font-size: 0.9rem;
+      color: var(--emerald);
+      font-weight: 600;
+    }
+
+    /* Footer */
+    footer {
+      padding: 48px 0 64px;
+      text-align: center;
+      color: var(--fg-muted);
+      font-size: 0.9rem;
+    }
+    footer a {
+      color: var(--fg);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    footer a:hover { color: var(--amber); }
+
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .compare-grid, .grid-3, .grid-2, .sim-wrapper, .tab-panel.active {
+        grid-template-columns: 1fr;
+      }
+      .wf-row {
+        grid-template-columns: 125px 1fr 66px;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="scroll-progress"></div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-inner">
+      <a href="#" class="brand">
+        <span class="brand-mark">φ</span>
+        <span>SHAP Rehberi</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#nedir">SHAP Nedir?</a>
+        <a href="#simulator">Simülatör</a>
+        <a href="#grafikler">Grafikler</a>
+        <a href="#kodlar">Python Kodları</a>
+        <a href="#sunum">Sunum Şablonu</a>
+        <a href="#hatalar">5 Kritik Hata</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="icon-btn" id="theme-toggle" aria-label="Tema değiştir">☀️ Açık Tema</button>
+        <a class="icon-btn" href="https://github.com/mehmetbugrakara" target="_blank" rel="noopener">@mehmetbugrakara</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <div class="micro-tag">
+        <span class="pulse-dot"></span>
+        Kurumsal Veri Bilimi · Model Açıklanabilirliği (XAI)
+      </div>
+      <h1>
+        Müşteriye Metrikleri Değil,<br>
+        <span class="font-serif-italic accent-italic">Ne Yapacağını</span> Göster: SHAP Rehberi
+      </h1>
+      <p class="hero-lead">
+        Kurumsal bir firmada Senior Data Scientist olarak çalışırken en zor şey modeli eğitmek değil, müşteriye anlatmaktır.
+        Çünkü hiçbir iş birimi senin <code>ROC-AUC</code> skorunla ilgilenmiyor. Onların tek derdi şu:
+        <strong>"Bu model benim ne işime yarayacak ve ben şimdi ne yapacağım?"</strong>
+      </p>
+      <div class="hero-cta-row">
+        <a href="#simulator" class="btn-primary">⚡ İnteraktif SHAP Simülatörünü Dene</a>
+        <a href="#kodlar" class="btn-secondary">💻 Uygulamalı Python Kodları</a>
+        <a href="#sunum" class="btn-secondary">📊 Müşteri Sunum Şablonu</a>
+      </div>
+
+      <!-- Old vs SHAP Approach -->
+      <div class="compare-grid">
+        <div class="card card-bad">
+          <span class="pill pill-bad">❌ Eski Yaklaşım · İletişim Kopukluğu</span>
+          <h3>Sadece Ham Model Metrikleri</h3>
+          <div class="metric-chips">
+            <span class="metric-chip">ROC-AUC: 0.94</span>
+            <span class="metric-chip">RMSE: 0.12</span>
+            <span class="metric-chip">F1-Skoru: %91.8</span>
+          </div>
+          <p style="color: var(--fg-muted); margin: 0; font-size: 0.94rem;">
+            Teknik olarak harika, ama toplantı odasında karşılığı sıfır. Yönetici bu slayta bakıp
+            <em>"Güzel, peki yarın sabah satış ekibine ne söyleyeceğim?"</em> diye sorar.
+          </p>
+        </div>
+
+        <div class="card card-good">
+          <span class="pill pill-good">✓ SHAP Yaklaşımı · Net Etki ve Yön</span>
+          <h3>Odaklanılacak İş Alanı ve Aksiyon</h3>
+          <ul class="action-list">
+            <li><span style="color: var(--emerald); font-weight: 800;">01</span> <span><strong>Hangi değişken?</strong> Her müşterinin tahminini iten veya çeken özellikleri tek tek çıkarır.</span></li>
+            <li><span style="color: var(--emerald); font-weight: 800;">02</span> <span><strong>Ne kadar ve hangi yönde?</strong> Pozitif/negatif etkiyi kesin sayısal birimle (+%14 / -%9) gösterir.</span></li>
+            <li><span style="color: var(--emerald); font-weight: 800;">03</span> <span><strong>Şimdi ne yapacağım?</strong> Ekibi doğrudan en yüksek kaldıraçlı iş aksiyonuna odaklar.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 1: What is SHAP -->
+    <section id="nedir">
+      <span class="section-kicker">01 · Temel Mantık</span>
+      <h2>SHAP Nedir? Kara Kutuyu Nasıl Açar?</h2>
+      <p class="section-desc">
+        <strong>SHAP (SHapley Additive exPlanations)</strong>, Nobel ödüllü ekonomist Lloyd Shapley'in 1953'te ortaya attığı
+        <strong>koalisyonel oyun teorisi</strong> fikrini makine öğrenmesi modellerine uygular.
+        Bir tahmini "takımın kazandığı toplam ödül", her bir değişkeni ise "oyuncu" gibi düşünür ve her oyuncunun sonuca yaptığı adil katkıyı hesaplar.
+      </p>
+
+      <div class="formula-box">
+        <div class="formula-eq">
+          <span style="color: var(--cyan);">f(x)</span> =
+          <span style="color: var(--fg-muted);">E[f(x)]</span> +
+          <span style="color: var(--amber);">φ₁</span> +
+          <span style="color: var(--coral);">φ₂</span> + ... +
+          <span style="color: var(--emerald);">φₘ</span>
+        </div>
+        <div class="formula-legend">
+          <span><strong>f(x)</strong>: Bu müşteri için model tahmini</span>
+          <span><strong>E[f(x)]</strong>: Tüm veri setinin baz (ortalama) tahmini</span>
+          <span><strong>φⱼ</strong>: <em>j</em>. değişkenin tahmine pozitif veya negatif katkısı</span>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <span class="pill pill-amber">Garanti 1 · Local Accuracy</span>
+          <h3>Toplam Her Zaman Tutar</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            Baz tahminin üzerine tüm değişkenlerin SHAP değerlerini eklediğinde <strong>tam olarak</strong> modelin o satır için ürettiği tahmine ulaşırsın. Kayıp pay yoktur.
+          </p>
+        </div>
+        <div class="card">
+          <span class="pill pill-cyan">Garanti 2 · Yön Bilgisi</span>
+          <h3>Sadece "Önemli" Demez</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            Klasik <code>feature_importance</code> sadece "Destek Çağrısı önemli" der. SHAP ise "3+ çağrı churn riskini <strong>+%18 artırıyor</strong>, 0 çağrı <strong>-%7 azaltıyor</strong>" der.
+          </p>
+        </div>
+        <div class="card">
+          <span class="pill pill-good">Garanti 3 · Consistency</span>
+          <h3>Tutarlı Sıralama</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            Bir değişkenin modele katkısı artarsa SHAP değeri asla azalmaz. Gini/Split-based önem skorlarındaki tutarsızlıkları (bias) ortadan kaldırır.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Interactive Simulator -->
+    <section id="simulator">
+      <span class="section-kicker">02 · Canlı Deneyim</span>
+      <h2>İnteraktif SHAP Waterfall Simülatörü</h2>
+      <p class="section-desc">
+        Müşteri Kaybı (Churn) senaryosunda değişkenlerle oyna ve <strong>SHAP Etki Grafiği'nin</strong> baz tahminden
+        (<code>E[f(x)] = %28.0</code>) nihai tahmine nasıl ulaştığını canlı gör. Aşağıdaki iş aksiyonu da müşterinin profiline göre anında güncellenir.
+      </p>
+
+      <div class="preset-row">
+        <button class="preset-btn active" data-preset="risky">🔥 Yüksek Churn Riski</button>
+        <button class="preset-btn" data-preset="loyal">🛡️ Sadık Müşteri</button>
+        <button class="preset-btn" data-preset="borderline">⚖️ Sınırda Müşteri</button>
+      </div>
+
+      <div class="sim-wrapper">
+        <!-- Controls -->
+        <div class="card">
+          <h3 style="margin-bottom: 16px;">Müşteri Profili (Girdiler)</h3>
+
+          <div class="slider-group">
+            <div class="slider-head">
+              <label for="s-tx">Son 30 Gün İşlem Sayısı</label>
+              <span class="slider-val" id="v-tx">2 işlem</span>
+            </div>
+            <input type="range" id="s-tx" min="0" max="20" step="1" value="2">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head">
+              <label for="s-tickets">Destek Çağrısı (Son 30 Gün)</label>
+              <span class="slider-val" id="v-tickets">4 çağrı</span>
+            </div>
+            <input type="range" id="s-tickets" min="0" max="6" step="1" value="4">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head">
+              <label for="s-contract">Kontrat Süresi (Ay)</label>
+              <span class="slider-val" id="v-contract">3 ay</span>
+            </div>
+            <input type="range" id="s-contract" min="1" max="24" step="1" value="3">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head">
+              <label for="s-tenure">Müşteri Kıdemi (Ay)</label>
+              <span class="slider-val" id="v-tenure">6 ay</span>
+            </div>
+            <input type="range" id="s-tenure" min="1" max="48" step="1" value="6">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-head">
+              <label for="s-discount">Uygulanan İndirim Oranı</label>
+              <span class="slider-val" id="v-discount">%5</span>
+            </div>
+            <input type="range" id="s-discount" min="0" max="30" step="5" value="5">
+          </div>
+        </div>
+
+        <!-- Waterfall Visualization -->
+        <div class="card">
+          <div class="wf-header">
+            <div>
+              <div class="font-mono" style="font-size: 0.74rem; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: 0.08em;">
+                Baz Tahmin E[f(x)] = %28.0
+              </div>
+              <h3 style="margin: 4px 0 0;">SHAP Etki Dağılımı (Waterfall)</h3>
+            </div>
+            <div class="wf-score-pill">
+              <span style="font-size: 0.82rem; color: var(--fg-muted); font-weight: 600;">Churn Olasılığı f(x):</span>
+              <span class="wf-score-num" id="wf-final">%74.5</span>
+            </div>
+          </div>
+
+          <div class="wf-rows" id="wf-rows"></div>
+
+          <div class="sim-action-box high-risk" id="sim-action-box">
+            <div class="sim-action-title" id="sim-action-title">🎯 Önerilen İş Aksiyonu</div>
+            <p class="sim-action-text" id="sim-action-text"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Plot Types -->
+    <section id="grafikler">
+      <span class="section-kicker">03 · Görsel Sözlük</span>
+      <h2>Hangi SHAP Grafiği Ne Zaman Kullanılır?</h2>
+      <p class="section-desc">
+        Tüm SHAP grafiklerini tek slayta doldurma. Kime konuştuğuna (C-Level yönetici mi, operasyon ekibi mi, teknik veri ekibi mi?) göre doğru grafiği seç.
+      </p>
+
+      <div class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="waterfall">1. Waterfall Plot</button>
+        <button class="tab-btn" data-tab="beeswarm">2. Beeswarm (Summary)</button>
+        <button class="tab-btn" data-tab="bar">3. Global Bar Plot</button>
+        <button class="tab-btn" data-tab="dependence">4. Dependence Plot</button>
+      </div>
+
+      <!-- Tab 1: Waterfall -->
+      <div class="tab-panel active" id="tab-waterfall">
+        <div class="svg-stage">
+          <svg viewBox="0 0 460 240" width="100%" height="auto" aria-label="Waterfall grafik örneği">
+            <text x="16" y="24" fill="#94a3b8" font-family="JetBrains Mono" font-size="11">E[f(x)] = 0.28  →  f(x) = 0.72</text>
+            <line x1="190" y1="36" x2="190" y2="215" stroke="#334155" stroke-dasharray="4 4"/>
+            <text x="16" y="64" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Destek Çağrısı = 4</text>
+            <rect x="190" y="48" width="135" height="22" rx="4" fill="#f43f5e"/>
+            <text x="333" y="64" fill="#fb7185" font-family="JetBrains Mono" font-size="11" font-weight="700">+0.24</text>
+
+            <text x="16" y="106" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Son 30g İşlem = 1</text>
+            <rect x="325" y="90" width="90" height="22" rx="4" fill="#f43f5e"/>
+            <text x="421" y="106" fill="#fb7185" font-family="JetBrains Mono" font-size="11" font-weight="700">+0.16</text>
+
+            <text x="16" y="148" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Kontrat = 3 Ay</text>
+            <rect x="360" y="132" width="55" height="22" rx="4" fill="#fb7185"/>
+            <text x="421" y="148" fill="#fb7185" font-family="JetBrains Mono" font-size="11" font-weight="700">+0.10</text>
+
+            <text x="16" y="190" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">İndirim = %20</text>
+            <rect x="315" y="174" width="45" height="22" rx="4" fill="#10b981"/>
+            <text x="270" y="190" fill="#34d399" font-family="JetBrains Mono" font-size="11" font-weight="700">-0.06</text>
+          </svg>
+        </div>
+        <div class="card">
+          <span class="pill pill-good">✓ Yönetici & Operasyon Favorisi</span>
+          <h3>Waterfall Plot (Tekil Tahmin)</h3>
+          <p style="color: var(--fg-muted); font-size: 0.94rem;">
+            <strong>Tek bir müşteriyi</strong> (veya tek bir kredi başvurusunu) neden o skorla değerlendirdiğimizi adım adım anlatır.
+          </p>
+          <ul class="action-list">
+            <li>🎯 <strong>Ne zaman?</strong> "Ahmet Yılmaz'ı neden yüksek riskli işaretledik?" sorusunu yanıtlarken.</li>
+            <li>💡 <strong>İpucu:</strong> Sunumda <code>max_display=6</code> ver; kalan 40 değişken "diğerleri" altında toplansın.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tab 2: Beeswarm -->
+      <div class="tab-panel" id="tab-beeswarm">
+        <div class="svg-stage">
+          <svg viewBox="0 0 460 240" width="100%" height="auto" aria-label="Beeswarm grafik örneği">
+            <line x1="250" y1="24" x2="250" y2="210" stroke="#475569" stroke-width="1.5"/>
+            <text x="234" y="226" fill="#94a3b8" font-family="JetBrains Mono" font-size="10">0.0 (Nötr)</text>
+            <text x="345" y="226" fill="#fb7185" font-family="JetBrains Mono" font-size="10">Riski Artırır →</text>
+            <text x="115" y="226" fill="#38bdf8" font-family="JetBrains Mono" font-size="10">← Riski Azaltır</text>
+
+            <text x="16" y="62" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Destek Çağrısı</text>
+            <circle cx="195" cy="58" r="5" fill="#38bdf8"/><circle cx="210" cy="54" r="5" fill="#38bdf8"/><circle cx="222" cy="61" r="5" fill="#38bdf8"/>
+            <circle cx="310" cy="58" r="5" fill="#f43f5e"/><circle cx="332" cy="53" r="5" fill="#f43f5e"/><circle cx="355" cy="60" r="5" fill="#f43f5e"/><circle cx="385" cy="56" r="5" fill="#f43f5e"/>
+
+            <text x="16" y="118" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Son 30g İşlem</text>
+            <circle cx="145" cy="114" r="5" fill="#f43f5e"/><circle cx="168" cy="119" r="5" fill="#f43f5e"/><circle cx="188" cy="112" r="5" fill="#f43f5e"/>
+            <circle cx="285" cy="116" r="5" fill="#38bdf8"/><circle cx="315" cy="112" r="5" fill="#38bdf8"/><circle cx="340" cy="119" r="5" fill="#38bdf8"/>
+
+            <text x="16" y="174" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Kontrat Süresi</text>
+            <circle cx="165" cy="170" r="5" fill="#f43f5e"/><circle cx="190" cy="174" r="5" fill="#f43f5e"/>
+            <circle cx="290" cy="168" r="5" fill="#38bdf8"/><circle cx="318" cy="173" r="5" fill="#38bdf8"/>
+          </svg>
+        </div>
+        <div class="card">
+          <span class="pill pill-cyan">🔬 Veri Bilimi & Ürün Ekibi</span>
+          <h3>Beeswarm (Özet Dağılım) Plot</h3>
+          <p style="color: var(--fg-muted); font-size: 0.94rem;">
+            Tüm veri setindeki her bir satırı nokta olarak çizer. Renk <strong>değişken değerini</strong> (kırmızı=yüksek, mavi=düşük), yatay konum ise <strong>SHAP etkisini</strong> gösterir.
+          </p>
+          <ul class="action-list">
+            <li>🎯 <strong>Ne zaman?</strong> Modelin genel resmini, aykırı değerleri ve yön ilişkisini tek bakışta görmek için.</li>
+            <li>⚠️ <strong>Dikkat:</strong> Teknik olmayan üst yönetime doğrudan koyma; önce 2 cümleyle rengin ne anlama geldiğini açıkla.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tab 3: Bar -->
+      <div class="tab-panel" id="tab-bar">
+        <div class="svg-stage">
+          <svg viewBox="0 0 460 240" width="100%" height="auto" aria-label="Global Bar grafik örneği">
+            <text x="16" y="26" fill="#94a3b8" font-family="JetBrains Mono" font-size="11">mean(|SHAP value|) — Global Önem Sırası</text>
+            <text x="16" y="64" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Son 30g İşlem</text>
+            <rect x="145" y="48" width="245" height="22" rx="5" fill="#f59e0b"/>
+            <text x="398" y="64" fill="#fbbf24" font-family="JetBrains Mono" font-size="11" font-weight="700">0.34</text>
+
+            <text x="16" y="108" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Destek Çağrısı</text>
+            <rect x="145" y="92" width="195" height="22" rx="5" fill="#f59e0b" opacity="0.88"/>
+            <text x="348" y="108" fill="#fbbf24" font-family="JetBrains Mono" font-size="11" font-weight="700">0.27</text>
+
+            <text x="16" y="152" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">Kontrat Süresi</text>
+            <rect x="145" y="136" width="135" height="22" rx="5" fill="#f59e0b" opacity="0.72"/>
+            <text x="288" y="152" fill="#fbbf24" font-family="JetBrains Mono" font-size="11" font-weight="700">0.19</text>
+
+            <text x="16" y="196" fill="#e2e8f0" font-family="Plus Jakarta Sans" font-size="12" font-weight="600">İndirim Oranı</text>
+            <rect x="145" y="180" width="88" height="22" rx="5" fill="#f59e0b" opacity="0.58"/>
+            <text x="241" y="196" fill="#fbbf24" font-family="JetBrains Mono" font-size="11" font-weight="700">0.12</text>
+          </svg>
+        </div>
+        <div class="card">
+          <span class="pill pill-amber">📌 C-Level Yönetici Özeti</span>
+          <h3>Global Bar Plot</h3>
+          <p style="color: var(--fg-muted); font-size: 0.94rem;">
+            Her değişkenin mutlak SHAP değerinin ortalamasını (<code>mean(|SHAP|)</code>) sıralar. En sade, en hızlı anlaşılan grafiktir.
+          </p>
+          <ul class="action-list">
+            <li>🎯 <strong>Ne zaman?</strong> Sunumun ilk slaydında "İşin %70'ini şu 3 faktör belirliyor" demek için.</li>
+            <li>💡 <strong>İpucu:</strong> Tek başına yön göstermez — yanına mutlaka oklarla (▲/▼) yön notu ekle.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tab 4: Dependence -->
+      <div class="tab-panel" id="tab-dependence">
+        <div class="svg-stage">
+          <svg viewBox="0 0 460 240" width="100%" height="auto" aria-label="Dependence grafik örneği">
+            <line x1="55" y1="195" x2="425" y2="195" stroke="#475569"/>
+            <line x1="55" y1="25" x2="55" y2="195" stroke="#475569"/>
+            <line x1="225" y1="28" x2="225" y2="195" stroke="#f59e0b" stroke-dasharray="5 4"/>
+            <text x="232" y="44" fill="#fbbf24" font-family="JetBrains Mono" font-size="10" font-weight="700">Kırılma Eşiği: %15 İndirim</text>
+            <circle cx="85" cy="68" r="5" fill="#f43f5e"/><circle cx="115" cy="76" r="5" fill="#f43f5e"/><circle cx="150" cy="82" r="5" fill="#f43f5e"/><circle cx="195" cy="92" r="5" fill="#f43f5e"/>
+            <circle cx="240" cy="142" r="5" fill="#10b981"/><circle cx="285" cy="155" r="5" fill="#10b981"/><circle cx="335" cy="162" r="5" fill="#10b981"/><circle cx="385" cy="166" r="5" fill="#10b981"/>
+            <text x="175" y="220" fill="#94a3b8" font-family="JetBrains Mono" font-size="10">İndirim Oranı (%)</text>
+          </svg>
+        </div>
+        <div class="card">
+          <span class="pill pill-good">💰 Kırılma Eşiği & ROI Bulucu</span>
+          <h3>Dependence (Scatter) Plot</h3>
+          <p style="color: var(--fg-muted); font-size: 0.94rem;">
+            Tek bir değişkenin değeri değiştikçe SHAP etkisinin nerede kırıldığını gösterir. İş ekiplerinin en sevdiği <strong>"Eşik değerimiz kaç olmalı?"</strong> sorusunun cevabıdır.
+          </p>
+          <ul class="action-list">
+            <li>🎯 <strong>Örnek karar:</strong> "%15 indirimden sonra churn düşüşü yataylaşıyor → %25 yerine %15 teklif ver, kârlılığı koru."</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Python Codes -->
+    <section id="kodlar">
+      <span class="section-kicker">04 · Uygulamalı Kodlar</span>
+      <h2>Üretimde Kullanabileceğin Temiz SHAP Kodları</h2>
+      <p class="section-desc">
+        Eski <code>shap_values</code> dizileri yerine modern <code>shap.Explanation</code> API'sini kullan. Tüm kodlar kopyala-çalıştır hazırdır.
+      </p>
+
+      <!-- Code 1 -->
+      <div class="code-card">
+        <div class="code-header">
+          <span class="code-title">01 · Kurulum (Terminal)</span>
+          <button class="copy-btn" onclick="copyCode(this)">Kopyala</button>
+        </div>
+        <pre><code>pip install shap xgboost scikit-learn pandas matplotlib</code></pre>
+      </div>
+
+      <!-- Code 2 -->
+      <div class="code-card">
+        <div class="code-header">
+          <span class="code-title">02 · Model Eğitimi + TreeExplainer (Modern API)</span>
+          <button class="copy-btn" onclick="copyCode(this)">Kopyala</button>
+        </div>
+        <pre><code><span class="kw">import</span> shap
+<span class="kw">import</span> xgboost <span class="kw">as</span> xgb
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+
+<span class="cm"># 1. Veriyi böl ve modeli eğit</span>
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=<span class="num">0.2</span>, random_state=<span class="num">42</span>)
+model = xgb.XGBClassifier(n_estimators=<span class="num">300</span>, max_depth=<span class="num">4</span>, learning_rate=<span class="num">0.05</span>, random_state=<span class="num">42</span>)
+model.fit(X_train, y_train)
+
+<span class="cm"># 2. Olasılık (probability) çıktısı için background seti ile TreeExplainer kur</span>
+<span class="cm"># Not: Müşteri sunumunda log-odds yerine 'probability' çok daha anlaşılırdır!</span>
+background = shap.sample(X_train, <span class="num">200</span>, random_state=<span class="num">42</span>)
+explainer = shap.TreeExplainer(model, data=background, model_output=<span class="str">"probability"</span>)
+shap_exp = explainer(X_test)
+
+<span class="cm"># 3. Dört temel grafik</span>
+shap.plots.waterfall(shap_exp[<span class="num">0</span>], max_display=<span class="num">8</span>)          <span class="cm"># Tek müşteri açıklaması</span>
+shap.plots.beeswarm(shap_exp, max_display=<span class="num">10</span>)             <span class="cm"># Genel dağılım + yön</span>
+shap.plots.bar(shap_exp, max_display=<span class="num">10</span>)                  <span class="cm"># Yönetici önem sırası</span>
+shap.plots.scatter(shap_exp[:, <span class="str">"indirim_orani"</span>])          <span class="cm"># Kırılma eşiği analizi</span></code></pre>
+      </div>
+
+      <!-- Code 3 -->
+      <div class="code-card">
+        <div class="code-header">
+          <span class="code-title">03 · CRM / Satış Ekibi İçin Müşteri Bazlı Top-3 Neden Çıkarma</span>
+          <button class="copy-btn" onclick="copyCode(this)">Kopyala</button>
+        </div>
+        <pre><code><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+
+<span class="kw">def</span> <span class="fn">top_shap_nedenleri</span>(shap_exp, X_df, top_n=<span class="num">3</span>):
+    <span class="str">"""Her müşteri için tahmini en çok etkileyen ilk N nedeni okunabilir metne çevirir."""</span>
+    sonuclar = []
+    vals = shap_exp.values
+    cols = X_df.columns
+
+    <span class="kw">for</span> i <span class="kw">in</span> range(len(X_df)):
+        row_shap = vals[i]
+        idx = np.argsort(np.abs(row_shap))[::-<span class="num">1</span>][:top_n]
+        nedenler = [
+            f<span class="str">"{cols[j]} ({X_df.iloc[i, j]}): {row_shap[j]:+.1%}"</span>
+            <span class="kw">for</span> j <span class="kw">in</span> idx
+        ]
+        sonuclar.append(<span class="str">" | "</span>.join(nedenler))
+
+    out = X_df.copy()
+    out[<span class="str">"churn_olasiligi"</span>] = model.predict_proba(X_df)[:, <span class="num">1</span>]
+    out[<span class="str">"top_3_neden"</span>] = sonuclar
+    <span class="kw">return</span> out.sort_values(<span class="str">"churn_olasiligi"</span>, ascending=<span class="kw">False</span>)
+
+aksiyon_tablosu = top_shap_nedenleri(shap_exp, X_test)
+aksiyon_tablosu[[<span class="str">"churn_olasiligi"</span>, <span class="str">"top_3_neden"</span>]].head(<span class="num">10</span>)</code></pre>
+      </div>
+
+      <!-- Explainer Matrix -->
+      <h3 style="margin: 30px 0 14px;">Hangi Model İçin Hangi Explainer?</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Explainer</th>
+              <th>Uygun Modeller</th>
+              <th>Hız</th>
+              <th>Not</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>TreeExplainer</code></td>
+              <td>XGBoost, LightGBM, CatBoost, RandomForest</td>
+              <td style="color: var(--emerald); font-weight: 700;">⚡ Çok Hızlı (Kesin)</td>
+              <td>Tablo verilerinde ilk tercihin bu olmalı.</td>
+            </tr>
+            <tr>
+              <td><code>LinearExplainer</code></td>
+              <td>Logistic / Linear Regression, Ridge, Lasso</td>
+              <td style="color: var(--emerald); font-weight: 700;">⚡ Anlık</td>
+              <td>Korelasyonlu değişkenlerde <code>feature_perturbation="correlation_dependent"</code> kullan.</td>
+            </tr>
+            <tr>
+              <td><code>DeepExplainer</code> / <code>GradientExplainer</code></td>
+              <td>PyTorch, TensorFlow / Keras</td>
+              <td style="color: var(--amber); font-weight: 700;">⚙️ Orta</td>
+              <td>Görüntü ve derin ağlarda arka plan örneklemini 100-500 satır tut.</td>
+            </tr>
+            <tr>
+              <td><code>PermutationExplainer</code></td>
+              <td>Herhangi bir model (Model-Agnostic)</td>
+              <td style="color: var(--coral); font-weight: 700;">🐢 Yavaş</td>
+              <td><code>KernelExplainer</code>'a göre daha stabil ve modern varsayılan.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 5: Client Presentation Template -->
+    <section id="sunum">
+      <span class="section-kicker">05 · Müşteri Sunum Şablonu</span>
+      <h2>Yöneticiyi İkna Eden 3 Slaytlık Sunum İskeleti</h2>
+      <p class="section-desc">
+        Teknik detayları Ek (Appendix) kısmına at. Ana sunumda müşteriye sadece şu 3 sorunun cevabını ver:
+      </p>
+
+      <div class="grid-3" style="margin-bottom: 24px;">
+        <div class="card">
+          <span class="pill pill-amber">Slayt 1 · İş Etkisi</span>
+          <h3>Model Ne Diyor?</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            "ROC-AUC 0.94" deme. Şunu de:<br>
+            <strong>"Önümüzdeki 30 günde kaybetme riskimiz yüksek 420 müşteri var. Model bu müşterilerin %82'sini önceden yakalıyor."</strong>
+          </p>
+        </div>
+        <div class="card">
+          <span class="pill pill-cyan">Slayt 2 · SHAP Kök Neden</span>
+          <h3>Neden Bu Tahmini Yapıyor?</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            Sadeleştirilmiş Türkçe kolon isimleriyle <strong>Global Bar + 1 Örnek Waterfall</strong> göster:<br>
+            <strong>"Riskin %65'i iki şeyden geliyor: ilk 30 günde düşük kullanım ve çözülemeyen destek talepleri."</strong>
+          </p>
+        </div>
+        <div class="card">
+          <span class="pill pill-good">Slayt 3 · Karar & Aksiyon</span>
+          <h3>Şimdi Ne Yapacağız?</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            Her top-SHAP değişkenini bir <strong>ekip aksiyonuna</strong> bağla:<br>
+            <strong>"2+ destek talebi açan müşteriyi 24 saat içinde müşteri başarısı ekibi arasın."</strong>
+          </p>
+        </div>
+      </div>
+
+      <!-- Copyable Speech / Email Template -->
+      <div class="code-card">
+        <div class="code-header">
+          <span class="code-title">📋 Kopyalanabilir Yönetici Özet Şablonu (E-posta / Slayt Notu)</span>
+          <button class="copy-btn" onclick="copyCode(this)">Kopyala</button>
+        </div>
+        <pre><code>KONU: [Proje Adı] — Model Çıktıları ve Öncelikli İş Aksiyonları
+
+1. ÖZET ETKİ:
+Modelimiz önümüzdeki [30 gün] içinde [hedef olay: örn. churn] riski taşıyan [420] müşteriyi
+önceliklendirdi. Geçmiş testlerde en yüksek riskli ilk %20'lik dilimde yakalama başarımız %[78].
+
+2. KARARI BELİRLEYEN İLK 3 FAKTÖR (SHAP Analizi):
+• [Faktör 1 - örn. Son 30 Gün İşlem Sayısı]: 3 işlemin altına düşen müşterilerde risk ortalama +%19 artıyor.
+• [Faktör 2 - örn. Destek Çağrısı]: 2 ve üzeri talep açanlarda risk +%16 artıyor.
+• [Faktör 3 - örn. Kontrat Süresi]: 12+ ay kontratlı müşterilerde risk -%14 azalıyor.
+
+3. ÖNERİLEN ACİL AKSİYONLAR:
+• Aksiyon 1 (Operasyon): 2+ destek talebi olan yüksek riskli [110] müşteriye proaktif arama listesi (ektedir).
+• Aksiyon 2 (Pazarlama): İlk 30 günde işlem yapmayan segmente otomatik onboarding akışı.
+• Aksiyon 3 (Fiyatlama): Dependence analizine göre %15 üzeri indirimin ek katkısı sınırlı; teklif tavanı %15 olmalı.</code></pre>
+      </div>
+    </section>
+
+    <!-- Section 6: 5 Pitfalls -->
+    <section id="hatalar">
+      <span class="section-kicker">06 · Senior DS Notları</span>
+      <h2>SHAP Kullanırken En Sık Yapılan 5 Kritik Hata</h2>
+      <p class="section-desc">
+        SHAP çok güçlü ama yanlış yorumlandığında iş ekibini hatalı kararlara sürükleyebilir. Üretime çıkmadan bu 5 kontrolü yap:
+      </p>
+
+      <div class="grid-2">
+        <div class="pitfall-card">
+          <h3>1. Korelasyonu Nedensellik (Causality) Sanmak</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            SHAP, modelin <em>nasıl tahmin yaptığını</em> açıklar; evrendeki nedenselliği değil. "Destek araması churn'ü artırıyor, o zaman çağrı merkezini kapatalım" tuzağına düşme.
+          </p>
+          <div class="pitfall-fix">✓ Çözüm: Aksiyon öncesi iş mantığıyla doğrula, mümkünse küçük bir A/B testiyle ölç.</div>
+        </div>
+
+        <div class="pitfall-card">
+          <h3>2. Çoklu Doğrusallık (Multicollinearity) Dağılması</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            <code>aylik_gelir</code> ve <code>yillik_gelir</code> gibi %95 korelasyonlu iki değişken varsa SHAP etkiyi ikisine böler; ikisi de olduğundan daha önemsiz görünür.
+          </p>
+          <div class="pitfall-fix">✓ Çözüm: Sunum öncesi aşırı korelasyonlu kolonları temizle veya <code>shap.utils.hclust</code> ile grupla.</div>
+        </div>
+
+        <div class="pitfall-card">
+          <h3>3. Log-Odds Birimiyle Sunuma Çıkmak</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            XGBoost sınıflandırmasında varsayılan SHAP çıktısı <code>log-odds</code>'tur. Müşteriye "+0.84 log-odds" dediğinde oda anında kopar.
+          </p>
+          <div class="pitfall-fix">✓ Çözüm: <code>TreeExplainer(model, data=bg, model_output="probability")</code> ile doğrudan yüzde (%) göster.</div>
+        </div>
+
+        <div class="pitfall-card">
+          <h3>4. Ham Veritabanı Kolon İsimlerini Kullanmak</h3>
+          <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+            Grafikte <code>cnt_tx_30d_v2_null_imp</code> yazıyorsa yönetici grafiği okumaya çalışmaktan vazgeçer.
+          </p>
+          <div class="pitfall-fix">✓ Çözüm: Grafik çizmeden hemen önce <code>shap_exp.feature_names</code> listesini temiz Türkçe iş etiketleriyle değiştir.</div>
+        </div>
+      </div>
+
+      <div class="pitfall-card" style="margin-top: 20px;">
+        <h3>5. Arka Plan (Background) Verisini Tüm Eğitim Seti Vermek</h3>
+        <p style="color: var(--fg-muted); font-size: 0.92rem; margin: 0;">
+          500 bin satırlık <code>X_train</code>'i doğrudan <code>data=X_train</code> diye verirsen hesaplama saatlerce sürer ve RAM şişer.
+        </p>
+        <div class="pitfall-fix">✓ Çözüm: <code>shap.sample(X_train, 200)</code> veya <code>shap.kmeans(X_train, 50)</code> kullan; sonuç neredeyse birebir aynı, hız 100x.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p style="margin: 0 0 8px;">
+        <strong>SHAP Uygulama & Müşteri Sunum Rehberi</strong> — Açık kaynak eğitim sayfası.
+      </p>
+      <p style="margin: 0;">
+        © 2026 Mehmet Buğra Kara ·
+        <a href="https://github.com/mehmetbugrakara" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://instagram.com/mehmetbugrakara" target="_blank" rel="noopener">Instagram</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll progress bar
+    window.addEventListener('scroll', () => {
+      const h = document.documentElement;
+      const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+      document.getElementById('scroll-progress').style.width = pct + '%';
+    });
+
+    // Theme toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    themeBtn.addEventListener('click', () => {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      themeBtn.textContent = isDark ? '🌙 Koyu Tema' : '☀️ Açık Tema';
+    });
+
+    // Copy code helper
+    function copyCode(btn) {
+      const code = btn.closest('.code-card').querySelector('pre code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const old = btn.textContent;
+        btn.textContent = 'Kopyalandı ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = old;
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    }
+
+    // Plot tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Interactive SHAP Waterfall Simulator
+    const BASE_PROB = 28.0; // E[f(x)] = 28%
+    const sliders = {
+      tx: document.getElementById('s-tx'),
+      tickets: document.getElementById('s-tickets'),
+      contract: document.getElementById('s-contract'),
+      tenure: document.getElementById('s-tenure'),
+      discount: document.getElementById('s-discount'),
+    };
+    const presets = {
+      risky: { tx: 2, tickets: 4, contract: 3, tenure: 6, discount: 5 },
+      loyal: { tx: 16, tickets: 0, contract: 24, tenure: 36, discount: 15 },
+      borderline: { tx: 6, tickets: 2, contract: 12, tenure: 14, discount: 10 },
+    };
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const p = presets[btn.dataset.preset];
+        Object.keys(p).forEach(k => { sliders[k].value = p[k]; });
+        updateSimulator();
+      });
+    });
+
+    Object.values(sliders).forEach(el => {
+      el.addEventListener('input', () => {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        updateSimulator();
+      });
+    });
+
+    function updateSimulator() {
+      const tx = Number(sliders.tx.value);
+      const tickets = Number(sliders.tickets.value);
+      const contract = Number(sliders.contract.value);
+      const tenure = Number(sliders.tenure.value);
+      const discount = Number(sliders.discount.value);
+
+      document.getElementById('v-tx').textContent = tx + ' işlem';
+      document.getElementById('v-tickets').textContent = tickets + ' çağrı';
+      document.getElementById('v-contract').textContent = contract + ' ay';
+      document.getElementById('v-tenure').textContent = tenure + ' ay';
+      document.getElementById('v-discount').textContent = '%' + discount;
+
+      // Pedagogical SHAP additive contributions (percentage points around 28% base)
+      const contrib = [
+        {
+          name: 'Destek Çağrısı',
+          sub: tickets + ' çağrı / 30g',
+          val: (tickets - 1.2) * 5.8,
+          action: 'Müşteri Başarısı ekibi 24 saat içinde proaktif arama yapıp açık destek taleplerini kapatmalı.'
+        },
+        {
+          name: 'Son 30 Gün İşlem',
+          sub: tx + ' işlem',
+          val: (8 - tx) * 1.9,
+          action: 'Kullanım düşüşü kritik: Müşteriye özel 15 dakikalık ürün adaptasyon (onboarding) seansı planla.'
+        },
+        {
+          name: 'Kontrat Süresi',
+          sub: contract + ' ay',
+          val: (10 - contract) * 1.05,
+          action: 'Kısa kontrat riski artırıyor: Yıllık plana geçişte ilk 2 ay avantajlı yenileme teklifi sun.'
+        },
+        {
+          name: 'Müşteri Kıdemi',
+          sub: tenure + ' ay',
+          val: (18 - tenure) * 0.35,
+          action: 'Yeni müşteri kırılganlığı var: İlk 90 gün check-in akışına dahil et.'
+        },
+        {
+          name: 'İndirim Oranı',
+          sub: '%' + discount + ' indirim',
+          val: (10 - Math.min(discount, 20)) * 0.65,
+          action: 'Fiyat hassasiyeti yüksek: %15 eşiğinde hedefli tutundurma indirimi uygula.'
+        }
+      ];
+
+      // Sort by absolute SHAP magnitude
+      contrib.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+
+      const rawTotal = BASE_PROB + contrib.reduce((acc, c) => acc + c.val, 0);
+      const finalProb = Math.max(3, Math.min(96, rawTotal));
+
+      const finalEl = document.getElementById('wf-final');
+      finalEl.textContent = '%' + finalProb.toFixed(1);
+      finalEl.style.color = finalProb >= 55 ? 'var(--coral)' : finalProb >= 30 ? 'var(--amber)' : 'var(--emerald)';
+
+      const maxAbs = 28;
+      const rowsEl = document.getElementById('wf-rows');
+      rowsEl.innerHTML = contrib.map(c => {
+        const isPos = c.val >= 0;
+        const pctWidth = Math.min(48, (Math.abs(c.val) / maxAbs) * 48);
+        const left = isPos ? 50 : (50 - pctWidth);
+        const sign = isPos ? '+' : '';
+        const arrow = isPos ? '▲' : '▼';
+        return `
+          <div class="wf-row">
+            <div class="wf-label">
+              <span>${c.name}</span>
+              <span class="wf-sub">${c.sub}</span>
+            </div>
+            <div class="wf-track">
+              <div class="wf-zero"></div>
+              <div class="wf-bar ${isPos ? 'pos' : 'neg'}" style="left:${left}%; width:${Math.max(2, pctWidth)}%;"></div>
+            </div>
+            <div class="wf-delta ${isPos ? 'pos' : 'neg'}">${sign}${c.val.toFixed(1)}% ${arrow}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Top risk driver action
+      const topRisk = contrib.find(c => c.val > 0);
+      const box = document.getElementById('sim-action-box');
+      const title = document.getElementById('sim-action-title');
+      const text = document.getElementById('sim-action-text');
+
+      box.classList.remove('high-risk', 'mid-risk');
+      if (finalProb >= 55 && topRisk) {
+        box.classList.add('high-risk');
+        title.textContent = `🚨 YÜKSEK RİSK · 1. ÖNCELİKLİ ODAK: ${topRisk.name.toUpperCase()}`;
+        text.textContent = topRisk.action;
+      } else if (finalProb >= 30 && topRisk) {
+        box.classList.add('mid-risk');
+        title.textContent = `⚠️ İZLEME LİSTESİ · ANA TETİKLEYİCİ: ${topRisk.name.toUpperCase()}`;
+        text.textContent = topRisk.action;
+      } else {
+        title.textContent = '✓ DÜŞÜK RİSK · SADIK MÜŞTERİ PROFİLİ';
+        text.textContent = 'Tutundurma bütçesi harcamaya gerek yok. Bu profili üst paket (upsell) veya referans kampanyasına yönlendirebilirsin.';
+      }
+    }
+
+    updateSimulator();
+  </script>
+</body>
+</html>
